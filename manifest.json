@@ -1,0 +1,14 @@
+{
+  "name": "English Coach 英文教練",
+  "short_name": "英文教練",
+  "description": "為弱聽學習者設計的英文學習工具",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6fa",
+  "theme_color": "#1f5fbf",
+  "lang": "zh-Hant",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

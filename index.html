@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>English Coach 英文教練</title>
+<meta name="description" content="為弱聽學習者設計的英文學習工具：單字、會話、聽力、發音、文法與 IELTS。">
+<meta name="theme-color" content="#1f5fbf">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <a href="#/" class="brand">English Coach <span>英文教練</span></a>
+  <a href="#/settings" class="gear" aria-label="設定">⚙</a>
+</header>
+<main id="app" tabindex="-1"></main>
+<nav class="tabs" aria-label="主選單">
+  <a href="#/" data-tab="">今日</a>
+  <a href="#/words" data-tab="words">單字</a>
+  <a href="#/talk" data-tab="talk">會話</a>
+  <a href="#/listen" data-tab="listen">聽力</a>
+  <a href="#/more" data-tab="more">更多</a>
+</nav>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="data/plan.js"></script>
+<script src="data/words.js"></script>
+<script src="data/dialogues.js"></script>
+<script src="data/sounds.js"></script>
+<script src="data/grammar.js"></script>
+<script src="data/ielts.js"></script>
+<script src="js/core.js"></script>
+<script src="js/views.js"></script>
+</body>
+</html>
