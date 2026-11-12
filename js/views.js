@@ -146,13 +146,13 @@ function wordlist() {
       const word = f.get('word').trim(), zh = f.get('zh').trim(), ex = f.get('ex').trim();
       if (!word || !zh) return;
       if (allWords().some((w) => w.word.toLowerCase() === word.toLowerCase())) return toast('這個字已經在單字表裡了');
-      S.custom.push({ word, zh, ex }); save(); toast(`已加入 ${word}`); level = 'MY'; draw();
+      S.custom.push({ word, zh, ex, t: Date.now() }); save(); toast(`已加入 ${word}`); level = 'MY'; draw();
     };
     $('#rows').onclick = (e) => {
       const b = e.target.closest('[data-del]'); if (!b) return;
       const word = b.dataset.del;
       if (!confirm(`刪除自訂單字「${word}」？`)) return;
-      S.custom = S.custom.filter((c) => c.word !== word); delete S.cards['my:' + word]; save(); $('#rows').innerHTML = rows();
+      S.custom = S.custom.filter((c) => c.word !== word); S.removed[word.toLowerCase()] = Date.now(); delete S.cards['my:' + word]; save(); $('#rows').innerHTML = rows();
     };
   }
   draw();
@@ -207,7 +207,7 @@ function talk(id) {
   };
   $('#lines').addEventListener('click', (e) => { if (e.target.closest('[data-say]') && playing) { playing = false; token++; allBtn.textContent = '▶ 全部播放'; } }, true);
   $('#tz').onclick = () => {
-    S.settings.showZh = !S.settings.showZh; save();
+    S.settings.showZh = !S.settings.showZh; saveSettings();
     $('#lines').classList.toggle('hide-zh', !S.settings.showZh);
     $('#tz').textContent = S.settings.showZh ? '隱藏中文' : '顯示中文';
   };
@@ -422,7 +422,7 @@ function ielts(tab) {
     const ta = $('#essay'), wc = $('#wc');
     const count = () => { const n = normWords(ta.value).length; wc.textContent = `${n} 字`; wc.classList.toggle('ok', n >= 250); };
     count();
-    ta.oninput = () => { S.essays[idx] = ta.value; save(); count(); };
+    ta.oninput = () => { S.essays[idx] = ta.value; S.essayT[idx] = Date.now(); save(); count(); };
     $('#pr').onchange = (e) => { idx = Number(e.target.value); draw(); };
     $('#tm').onclick = () => {
       if (timer) { clearInterval(timer); timer = null; } else {
@@ -495,16 +495,46 @@ function settings() {
       <input type="date" id="start" value="${S.start}" max="${dateStr()}">
     </div>
     <div class="card">
+      <b>跨裝置同步</b> <span class="pill" id="syncState">${esc(Sync.text())}</span>
+      ${Sync.on ? `
+        <p class="muted">進度會自動存到你 GitHub 帳號裡的私人 Gist。開啟 App、切回 App 和每次練習後都會同步。在另一台裝置貼上同一組權杖就能接續進度。</p>
+        <div class="row"><button class="primary" id="syncNow">立即同步</button><button id="syncOff">在這台裝置停止同步</button></div>` : `
+        <p class="muted">讓手機和電腦共用同一份進度。進度會存在你自己 GitHub 帳號的私人 Gist，不經過其他伺服器。</p>
+        <ol class="muted" style="padding-left:1.3em">
+          <li>打開 <a href="https://github.com/settings/tokens/new?scopes=gist&description=English%20Coach%20sync" target="_blank" rel="noopener">建立 GitHub 權杖</a>（已預先勾選 gist 權限）。Expiration 建議選 No expiration 或一年，按最下面的 Generate token。</li>
+          <li>複製產生的權杖（ghp_ 開頭），貼到下面。</li>
+          <li>在每一台裝置都貼上同一組權杖。第一次連結時，兩邊的進度會自動合併。</li>
+        </ol>
+        <input type="text" id="tok" placeholder="貼上 GitHub 權杖" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button class="primary" id="syncOn" style="margin-top:8px">連結並同步</button>
+        <p class="muted">權杖只存在這台裝置的瀏覽器，不會包含在匯出的備份檔裡。這個權杖只能讀寫你的 Gist，不能動你的程式碼儲存庫。</p>`}
+    </div>
+    <div class="card">
       <b>資料備份</b>
-      <p class="muted">進度只存在這台裝置的瀏覽器裡。換裝置或清除瀏覽資料前，先匯出備份。</p>
+      <p class="muted">${Sync.on ? '已開啟同步，進度在雲端也有一份。匯出備份可以額外留存。' : '沒有開啟同步時，進度只存在這台裝置的瀏覽器裡。換裝置或清除瀏覽資料前，先匯出備份。'}</p>
       <div class="row"><button id="exp">匯出備份</button><button id="imp">匯入備份</button><button id="reset">清除全部進度</button></div>
       <input type="file" id="file" accept="application/json,.json" hidden>
     </div>`;
-  $('#voice').onchange = (e) => { s.voice = e.target.value; save(); };
-  $('#rate').oninput = (e) => { s.rate = Number(e.target.value); $('#rv').textContent = s.rate; save(); };
-  $('#pitch').oninput = (e) => { s.pitch = Number(e.target.value); $('#pv').textContent = s.pitch; save(); };
-  $('#npd').onchange = (e) => { s.newPerDay = Math.max(0, Math.min(50, Number(e.target.value) || 0)); save(); };
-  $('#start').onchange = (e) => { if (e.target.value && e.target.value <= dateStr()) { S.start = e.target.value; save(); toast(`現在是第 ${currentWeek()} 週`); } };
+  $('#voice').onchange = (e) => { s.voice = e.target.value; saveSettings(); };
+  $('#rate').oninput = (e) => { s.rate = Number(e.target.value); $('#rv').textContent = s.rate; saveSettings(); };
+  $('#pitch').oninput = (e) => { s.pitch = Number(e.target.value); $('#pv').textContent = s.pitch; saveSettings(); };
+  $('#npd').onchange = (e) => { s.newPerDay = Math.max(0, Math.min(50, Number(e.target.value) || 0)); saveSettings(); };
+  $('#start').onchange = (e) => { if (e.target.value && e.target.value <= dateStr()) { S.start = e.target.value; saveSettings(); toast(`現在是第 ${currentWeek()} 週`); } };
+  const on = $('#syncOn');
+  if (on) on.onclick = async () => {
+    const tok = $('#tok').value.trim();
+    if (!tok) return toast('請先貼上權杖');
+    on.disabled = true; on.textContent = '連結中…';
+    try {
+      const r = await Sync.connect(tok);
+      toast(r === 'merged' ? '已連結，並和雲端進度合併' : '已建立雲端進度，其他裝置貼上同一組權杖即可');
+    } catch (e) { toast(e.message || '連結失敗'); }
+    settings();
+  };
+  const now = $('#syncNow');
+  if (now) now.onclick = async () => { await Sync.run(); toast(Sync.lastErr ? Sync.lastErr : '同步完成'); settings(); };
+  const off = $('#syncOff');
+  if (off) off.onclick = () => { if (!confirm('停止後這台裝置的進度不會再同步，雲端的資料會保留。確定嗎？')) return; Sync.disconnect(); settings(); };
   $('#exp').onclick = () => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' }));
@@ -516,13 +546,17 @@ function settings() {
     try {
       const data = JSON.parse(await f.text());
       if (!data || typeof data !== 'object' || !data.cards || !data.settings) throw new Error('format');
-      if (!confirm('匯入會覆蓋目前的進度，確定嗎？')) return;
-      localStorage.setItem(KEY, JSON.stringify(data)); S = loadState(); toast('已匯入'); settings();
+      if (!confirm(Sync.on ? '匯入的進度會和目前的進度合併，並同步到雲端。確定嗎？' : '匯入會覆蓋目前的進度，確定嗎？')) return;
+      if (Sync.on) { S = mergeStates(S, data); save(); Sync.run(); }
+      else { localStorage.setItem(KEY, JSON.stringify(data)); S = loadState(); }
+      toast('已匯入'); settings();
     } catch (err) { toast('這不是有效的備份檔'); }
   };
   $('#reset').onclick = () => {
-    if (!confirm('確定要清除全部學習進度嗎？這個動作無法復原。')) return;
-    localStorage.removeItem(KEY); S = loadState(); toast('已清除'); settings();
+    if (!confirm(Sync.on ? '確定要清除全部學習進度嗎？所有已同步裝置和雲端的進度都會清除，無法復原。' : '確定要清除全部學習進度嗎？這個動作無法復原。')) return;
+    localStorage.removeItem(KEY); S = loadState(); S.resetAt = S.updatedAt = Date.now(); saveLocal();
+    if (Sync.on) Sync.run(true);
+    toast('已清除'); settings();
   };
   if (TTS.ok && !TTS.voices.length) {
     const again = () => { if (location.hash === '#/settings') settings(); };
@@ -546,6 +580,11 @@ function route() {
   window.scrollTo(0, 0);
 }
 window.addEventListener('hashchange', route);
+// 從雲端合併到新進度時，重畫不會打斷練習的頁面
+window.addEventListener('synced', () => {
+  const name = location.hash.replace(/^#\/?/, '').split('/')[0];
+  if (['', 'wordlist', 'plan', 'more'].includes(name) || (['talk', 'grammar'].includes(name) && !location.hash.split('/')[2])) route();
+});
 route();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {

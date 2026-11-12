@@ -21,6 +21,11 @@ const DEFAULTS = {
   grammar: {},   // 課程 id -> 最佳答對題數
   dialogs: {},   // 場景 id -> true
   essays: {},    // 題目索引 -> 文字
+  essayT: {},    // 題目索引 -> 最後修改時間（同步用）
+  removed: {},   // 已刪除的自訂單字 -> 刪除時間（同步用）
+  settingsT: 0,  // 設定最後修改時間（同步用）
+  updatedAt: 0,
+  resetAt: 0,    // 最後一次清除全部進度的時間（同步用）
 };
 function loadState() {
   let saved = {};
@@ -30,9 +35,15 @@ function loadState() {
   return s;
 }
 let S = loadState();
-function save() {
+function saveLocal() {
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('無法儲存進度，請檢查瀏覽器設定'); }
 }
+function save() {
+  S.updatedAt = Date.now();
+  saveLocal();
+  if (typeof Sync !== 'undefined') Sync.soon();
+}
+function saveSettings() { S.settingsT = Date.now(); save(); }
 function todayLog() {
   const d = dateStr();
   if (!S.log[d]) S.log[d] = { done: {}, reviews: 0, newCount: 0 };
@@ -86,6 +97,7 @@ function gradeCard(id, g) {
     if (g === 3) c.ease += 0.15;
     c.reps++; c.due = today + c.ivl;
   }
+  c.t = Date.now();
   S.cards[id] = c;
   const l = todayLog();
   l.reviews++;

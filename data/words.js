@@ -2,7 +2,7 @@
 // 要加單字時，照同樣格式在對應等級加一行即可。
 const WORD_DATA = {
   A1: `
-name|n.|/neɪm/|名字|My name is Wazza.|我的名字是 Wazza。
+name|n.|/neɪm/|名字|My name is Alex.|我的名字是 Alex。
 people|n.|/ˈpiːpəl/|人們|Many people live here.|很多人住在這裡。
 friend|n.|/frend/|朋友|She is my best friend.|她是我最好的朋友。
 family|n.|/ˈfæməli/|家人、家庭|I love my family.|我愛我的家人。

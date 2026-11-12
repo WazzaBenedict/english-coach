@@ -2,7 +2,7 @@
 const DIALOGUES = [
   { id: 'd1', title: '打招呼與自我介紹', tip: '第一次見面最常用的句子。把 B 的回答換成你自己的資料。', lines: [
     ['A', 'Hi, nice to meet you. I\'m Sarah.', '嗨，很高興認識你。我是 Sarah。'],
-    ['B', 'Nice to meet you too. My name is Wazza.', '我也很高興認識你。我叫 Wazza。'],
+    ['B', 'Nice to meet you too. My name is Alex.', '我也很高興認識你。我叫 Alex。'],
     ['A', 'Where are you from?', '你來自哪裡？'],
     ['B', 'I\'m from Taiwan. How about you?', '我來自台灣。你呢？'],
     ['A', 'I\'m from Canada. What do you do?', '我來自加拿大。你做什麼工作？'],
@@ -99,7 +99,7 @@ const DIALOGUES = [
     ['A', 'Okay. Enjoy your stay.', '好的。祝你旅途愉快。'],
   ]},
   { id: 'd10', title: '飯店入住', tip: '可以請櫃台把房號和 Wi-Fi 密碼寫下來。', lines: [
-    ['B', 'Hi, I have a reservation under the name Wazza.', '嗨，我有訂房，名字是 Wazza。'],
+    ['B', 'Hi, I have a reservation under the name Alex.', '嗨，我有訂房，名字是 Alex。'],
     ['A', 'Welcome. Can I see your ID, please?', '歡迎。可以看一下你的證件嗎？'],
     ['B', 'Sure. Here it is.', '當然。在這裡。'],
     ['A', 'You have a single room for three nights.', '你訂的是單人房三晚。'],
