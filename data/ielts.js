@@ -44,7 +44,7 @@ const IELTS = {
       'Describe a place you would like to visit. You should say: where it is, how you know about it, what you would do there, and explain why you want to visit it.',
       'Describe a skill you want to learn. You should say: what it is, why you want to learn it, how you would learn it, and explain how it would help you.',
       'Describe a memorable trip. You should say: where you went, who you went with, what you did, and explain why it was memorable.',
-      'Describe a book or movie you enjoyed. You should say: what it was about, when you read or watched it, who you would recommend it to, and explain why you enjoyed it.',
+      'Describe a book or film you enjoyed. You should say: what it was about, when you read or watched it, who you would recommend it to, and explain why you enjoyed it.',
       'Describe a difficult thing you did well. You should say: what it was, why it was difficult, how you did it, and explain how you felt afterwards.',
     ],
     'Part 3': [

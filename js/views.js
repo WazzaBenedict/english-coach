@@ -20,94 +20,6 @@ document.addEventListener('click', (e) => {
   speakEl(el, b.dataset.say, { rate: Number(b.dataset.rate) || undefined });
 });
 
-// ---------- 今日 ----------
-function home() {
-  const p = currentPhase(), w = currentWeek(), st = wordStats(), l = todayLog();
-  const doneN = p.tasks.filter((t) => l.done[t.id]).length;
-  const total = p.tasks.reduce((n, t) => n + t.min, 0);
-  const tip = TIPS[dayNum() % TIPS.length];
-  app.innerHTML = `
-    <p class="muted">第 ${w} 週 · 階段 ${PHASES.indexOf(p) + 1}「${p.name}」· ${p.cefr}</p>
-    <h1>今天的練習</h1>
-    <div class="stats">
-      <div class="stat"><b>${streak()}</b><span>連續天數</span></div>
-      <div class="stat"><b>${st.learned}</b><span>已學單字</span></div>
-      <div class="stat"><b>${st.due}</b><span>待複習</span></div>
-    </div>
-    <div class="card">
-      <div class="row between"><b>今日任務 ${doneN} / ${p.tasks.length}</b><span class="muted">約 ${total} 分鐘</span></div>
-      <div class="bar" style="margin:8px 0 4px"><i style="width:${(doneN / p.tasks.length) * 100}%"></i></div>
-      ${p.tasks.map((t) => `
-        <div class="task ${l.done[t.id] ? 'done' : ''}">
-          <input type="checkbox" data-task="${t.id}" ${l.done[t.id] ? 'checked' : ''} aria-label="${esc(t.label)}">
-          <div class="grow">${esc(t.label)} <span class="muted">${t.min} 分</span></div>
-          <a class="btn small" href="${t.link}">開始</a>
-        </div>`).join('')}
-    </div>
-    <div class="note">💡 ${esc(tip)}</div>
-    <div class="card">
-      <b>這個階段的目標</b>
-      <p>${esc(p.goal)}</p>
-      <a href="#/plan">看完整的一年路線</a>
-    </div>`;
-  $$('[data-task]').forEach((c) => c.addEventListener('change', () => { markTask(c.dataset.task, c.checked); home(); }));
-}
-
-// ---------- 單字複習 ----------
-function words() {
-  const q = buildQueue();
-  let queue = [...q.due.map((w) => ({ w, isNew: false })), ...q.fresh.map((w) => ({ w, isNew: true }))];
-  let flipped = false, count = 0;
-  const head = `<div class="row between"><h1>單字</h1><a class="btn small" href="#/wordlist">單字表與自訂單字</a></div>`;
-
-  function finish() {
-    if (count > 0) markTask('words');
-    const st = wordStats();
-    const more = allWords().filter((w) => !S.cards[w.id]).length;
-    app.innerHTML = `${head}
-      <div class="card flash">
-        <div class="big">${count > 0 ? '🎉 今天的單字完成了' : '目前沒有要複習的單字'}</div>
-        <p class="muted">已學 ${st.learned} / ${st.total} 個，其中 ${st.mature} 個已經記熟。</p>
-        ${more ? '<button class="primary" id="more">再學 5 個新字</button>' : '<p>單字庫的字都學過了。到單字表加入你自己遇到的生字吧。</p>'}
-      </div>`;
-    const b = $('#more');
-    if (b) b.onclick = () => {
-      queue = allWords().filter((w) => !S.cards[w.id]).sort((a, c) => (a.level === 'MY' ? -1 : 0) - (c.level === 'MY' ? -1 : 0)).slice(0, 5).map((w) => ({ w, isNew: true }));
-      draw();
-    };
-  }
-
-  function draw() {
-    if (!queue.length) return finish();
-    const { w, isNew } = queue[0];
-    app.innerHTML = `${head}
-      <p class="muted">剩下 ${queue.length} 張 ${isNew ? '<span class="pill">新字</span>' : ''}</p>
-      <div class="card flash">
-        <div class="w">${esc(w.word)}</div>
-        <div class="ipa">${esc(w.ipa || '')} <span class="muted">${esc(w.pos || '')}</span></div>
-        <div class="row" style="justify-content:center;margin-top:12px">${sayPair(w.word)}</div>
-        ${flipped ? `
-          <div class="zh">${esc(w.zh)}</div>
-          ${w.ex ? `<p class="en" id="ex">${spanify(w.ex)}</p><p class="zh">${esc(w.exZh || '')}</p>
-          <div class="row" style="justify-content:center">${sayPair(w.ex, 'ex')}</div>` : ''}
-          <div class="grades">
-            ${['忘記', '困難', '記得', '簡單'].map((t, g) => `<button data-g="${g}">${t}<small>${nextIntervalLabel(w.id, g)}</small></button>`).join('')}
-          </div>` : `
-          <p class="muted" style="margin-top:18px">先在心裡想中文意思，並試著唸出來</p>
-          <button class="primary" id="flip">顯示答案</button>`}
-      </div>`;
-    if (!flipped) $('#flip').onclick = () => { flipped = true; draw(); TTS.speak(w.word); };
-    $$('[data-g]').forEach((b) => b.onclick = () => {
-      const g = Number(b.dataset.g);
-      gradeCard(w.id, g);
-      const cur = queue.shift();
-      if (g === 0) queue.push({ w: cur.w, isNew: false });
-      count++; flipped = false; TTS.stop(); draw();
-    });
-  }
-  draw();
-}
-
 // ---------- 單字表 ----------
 function wordlist() {
   let level = 'all', kw = '';
@@ -163,7 +75,7 @@ function talk(id) {
   const d = DIALOGUES.find((x) => x.id === id);
   if (!d) {
     app.innerHTML = `<h1>會話場景</h1>
-      <p class="muted">每個場景先看字聽一遍，再逐句跟讀。B 是你的角色。</p>
+      <p class="muted">這裡可以自由練習任何場景。每天的課會依序帶你學，不必自己挑。</p>
       <div class="card list">${DIALOGUES.map((x, i) => `
         <a class="item" href="#/talk/${x.id}"><span>${i + 1}. ${esc(x.title)}</span>${S.dialogs[x.id] ? '<span class="pill ok">已完成</span>' : '<span class="muted">›</span>'}</a>`).join('')}
       </div>`;
@@ -358,6 +270,7 @@ function ielts(tab) {
 
   if (tab === 'info') {
     app.innerHTML = `${head}
+      <div class="note">研究顯示，程度還沒到 B1 時練考題的效益很低。建議先把每日課程上完，到第四階段再開始 IELTS 專項練習。</div>
       <div class="card"><table>${IELTS.intro.map((r) => `<tr><th style="white-space:nowrap">${esc(r[0])}</th><td>${esc(r[1])}</td></tr>`).join('')}</table></div>
       <h2>分數對照</h2>
       <div class="card"><table><tr><th>分數</th><th>CEFR</th><th>程度</th></tr>${IELTS.bands.map((r) => `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${esc(r[2])}</td></tr>`).join('')}</table></div>
@@ -438,33 +351,10 @@ function ielts(tab) {
   onLeave(() => clearInterval(timer));
 }
 
-// ---------- 學習路線 ----------
-function plan() {
-  const w = currentWeek(), cur = currentPhase();
-  app.innerHTML = `<h1>一年學習路線</h1>
-    <div class="card"><div class="row between"><b>第 ${w} 週 / 52 週</b><span class="muted">開始日 ${S.start}</span></div>
-      <div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, (w / 52) * 100)}%"></i></div></div>
-    <div class="note"><b>對目標的誠實評估：</b>三個月達到日常溝通（A2）是做得到的。IELTS 8.5 接近母語者水準，從國小程度一年內達成非常困難，這份路線把它當長期方向，一年內的實際里程碑是 6 個月 B1（約 5 分）、12 個月 B2（約 6 到 6.5 分）。每天投入越多、越常和真人對話，進度越快。</div>
-    ${PHASES.map((p, i) => `
-      <div class="card phase ${p === cur ? 'current' : ''}">
-        <div class="row between"><b>階段 ${i + 1}：${p.name}</b><span class="pill">第 ${p.weeks[0]}–${p.weeks[1]} 週</span></div>
-        <p class="muted">${p.cefr} · 每天 ${p.time}${p === cur ? ' · <b>目前階段</b>' : ''}</p>
-        <p>${esc(p.goal)}</p>
-        <ul>${p.focus.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
-      </div>`).join('')}
-    <h2>工具以外一定要做的事</h2>
-    <div class="card"><ul>
-      <li><b>找真人對話。</b>第 4 週起每週至少一次，可用語言交換 App 或線上家教。優先選視訊，看得到嘴型。</li>
-      <li><b>大量看有字幕的英文影片。</b>先開英文字幕，看得懂再關掉試聽。</li>
-      <li><b>從第二階段開始閱讀。</b>分級讀本、簡易新聞，生字加進自訂單字。</li>
-      <li><b>考前三個月聯絡 IELTS 考場</b>申請弱聽特殊安排。</li>
-    </ul></div>`;
-}
-
 // ---------- 更多 ----------
 function more() {
-  const items = [['#/sounds', '發音嘴型指南', '用看的學發音'], ['#/grammar', '文法', '10 課基礎文法與測驗'], ['#/ielts', 'IELTS', '考試介紹、弱聽安排、口說與寫作練習'],
-    ['#/wordlist', '單字表', '查看全部單字、加入自訂單字'], ['#/plan', '一年學習路線', '四個階段與里程碑'], ['#/settings', '設定', '語音、語速、資料備份']];
+  const items = [['#/sounds', '發音嘴型指南', '用看的學發音'], ['#/grammar', '文法', '10 課基礎文法與測驗'], ['#/ielts', 'IELTS', '建議第四階段再開始。考試介紹、聽障考生安排、口說與寫作'],
+    ['#/wordlist', '單字表', '查看全部單字、加入自訂單字'], ['#/plan', '學習路線', '分段目標與我可以做到的事'], ['#/settings', '設定', '口音、語音、語速、同步與備份']];
   app.innerHTML = `<h1>更多</h1><div class="card list">${items.map((i) => `
     <a class="item" href="${i[0]}"><span><b>${i[1]}</b><br><span class="muted">${i[2]}</span></span><span class="muted">›</span></a>`).join('')}</div>`;
 }
@@ -493,6 +383,8 @@ function settings() {
     </div>
     <div class="card">
       <b>學習</b>
+      <label class="row" style="font-weight:400"><input type="checkbox" id="marks" ${s.marks !== false ? 'checked' : ''} style="width:24px;height:24px"> 把容易聽不見的字尾畫底線（-s、-ed、縮寫）</label>
+      <p><a href="#/start">重新做一次開始設定</a>（目標說明、每日時間、聲音試聽）</p>
       <label for="npd">每天新單字數</label>
       <input type="number" id="npd" min="0" max="50" value="${s.newPerDay}">
       <label for="start">開始日期（用來計算第幾週）</label>
@@ -523,6 +415,7 @@ function settings() {
   $('#voice').onchange = (e) => { s.voice = e.target.value; saveSettings(); };
   $('#rate').oninput = (e) => { s.rate = Number(e.target.value); $('#rv').textContent = s.rate; saveSettings(); };
   $('#pitch').oninput = (e) => { s.pitch = Number(e.target.value); $('#pv').textContent = s.pitch; saveSettings(); };
+  $('#marks').onchange = (e) => { s.marks = e.target.checked; saveSettings(); settings(); };
   $('#npd').onchange = (e) => { s.newPerDay = Math.max(0, Math.min(50, Number(e.target.value) || 0)); saveSettings(); };
   $('#start').onchange = (e) => { if (e.target.value && e.target.value <= dateStr()) { S.start = e.target.value; saveSettings(); toast(`現在是第 ${currentWeek()} 週`); } };
   const on = $('#syncOn');
@@ -571,8 +464,8 @@ function settings() {
 }
 
 // ---------- 路由 ----------
-const ROUTES = { '': home, words, wordlist, talk, listen, sounds, grammar, ielts, plan, more, settings };
-const TAB_OF = { '': '', words: 'words', wordlist: 'words', talk: 'talk', listen: 'listen', sounds: 'listen' };
+const ROUTES = { '': home, lesson, start, words, wordlist, talk, listen, sounds, grammar, ielts, plan, more, settings };
+const TAB_OF = { '': '', lesson: '', start: '', words: 'words', wordlist: 'words', talk: 'talk', listen: 'listen', sounds: 'listen' };
 function route() {
   cleanups.forEach((fn) => { try { fn(); } catch (e) { /* 忽略 */ } });
   cleanups = [];
@@ -588,7 +481,7 @@ window.addEventListener('hashchange', route);
 // 從雲端合併到新進度時，重畫不會打斷練習的頁面
 window.addEventListener('synced', () => {
   const name = location.hash.replace(/^#\/?/, '').split('/')[0];
-  if (['', 'wordlist', 'plan', 'more'].includes(name) || (['talk', 'grammar'].includes(name) && !location.hash.split('/')[2])) route();
+  if (['', 'wordlist', 'plan', 'more'].includes(name) && S.settings.onboarded || (['talk', 'grammar'].includes(name) && !location.hash.split('/')[2])) route();
 });
 route();
 

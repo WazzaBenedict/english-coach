@@ -18,7 +18,7 @@ function dropBefore(x, r) {
     cards: keep(x.cards, ([, c]) => (c.t || 0) > r),
     custom: (x.custom || []).filter((c) => (c.t || 0) > r),
     essays: keep(x.essays, ([k]) => ((x.essayT || {})[k] || 0) > r),
-    log: {}, grammar: {}, dialogs: {},
+    log: {}, grammar: {}, dialogs: {}, cando: {}, lessonN: 0, lessonDate: '', lessonStep: null,
   });
 }
 function mergeStates(a, b) {
@@ -60,6 +60,12 @@ function mergeStates(a, b) {
   // 文法最高分、完成的會話
   for (const [id, s] of Object.entries(b.grammar || {})) m.grammar[id] = Math.max(m.grammar[id] || 0, s);
   m.dialogs = Object.assign({}, b.dialogs, a.dialogs);
+  m.cando = Object.assign({}, a.cando);
+  for (const [id, l] of Object.entries(b.cando || {})) m.cando[id] = Math.max(m.cando[id] || 0, l);
+  // 課程進度：取上得比較多的那一邊
+  const an = a.lessonN || 0, bn = b.lessonN || 0;
+  if (bn > an) { m.lessonN = bn; m.lessonDate = b.lessonDate || ''; m.lessonStep = b.lessonStep || null; }
+  else if (bn === an && b.lessonStep && (!a.lessonStep || (b.lessonStep.n === an + 1 && b.lessonStep.i > (a.lessonStep.n === an + 1 ? a.lessonStep.i : -1)))) m.lessonStep = b.lessonStep;
 
   // 作文：取較新的版本
   m.essayT = Object.assign({}, a.essayT);

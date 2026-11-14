@@ -41,7 +41,7 @@ const GRAMMAR = [
     '字尾的 ed 常常很輕。聽不到時，靠 yesterday、last week 這類時間詞判斷。',
   ], examples: [['I went to Japan last year.', '我去年去了日本。'], ['She didn\'t call me.', '她沒有打給我。'], ['Did you eat breakfast?', '你吃早餐了嗎？']],
     quiz: [
-      { q: 'I ___ a movie yesterday.', opts: ['watch', 'watched', 'watching'], a: 1, why: 'yesterday 是過去時間。' },
+      { q: 'I ___ a film yesterday.', opts: ['watch', 'watched', 'watching'], a: 1, why: 'yesterday 是過去時間。' },
       { q: 'We ___ to the park last Sunday.', opts: ['go', 'goed', 'went'], a: 2, why: 'go 的過去式是 went。' },
       { q: 'Did you ___ him?', opts: ['see', 'saw', 'seen'], a: 0, why: 'Did 後面用原形動詞。' },
       { q: 'They ___ at home last night.', opts: ['was', 'were', 'are'], a: 1, why: 'They 的過去式 be 動詞是 were。' },
@@ -99,7 +99,7 @@ const GRAMMAR = [
   ], examples: [['This one is cheaper than that one.', '這個比那個便宜。'], ['English is more useful than I thought.', '英文比我想的更有用。'], ['It is the best restaurant in town.', '這是鎮上最好的餐廳。']],
     quiz: [
       { q: 'My room is ___ than yours.', opts: ['small', 'smaller', 'smallest'], a: 1, why: 'than 前面用比較級。' },
-      { q: 'This is the ___ movie I have ever seen.', opts: ['good', 'better', 'best'], a: 2, why: 'the 後面用最高級。' },
+      { q: 'This is the ___ film I have ever seen.', opts: ['good', 'better', 'best'], a: 2, why: 'the 後面用最高級。' },
       { q: 'A taxi is ___ than a bus.', opts: ['expensiver', 'more expensive', 'most expensive'], a: 1, why: '長形容詞用 more。' },
       { q: 'Today is ___ than yesterday.', opts: ['hot', 'hotter', 'hottest'], a: 1, why: 'hot 重複字尾加 er。' },
     ] },

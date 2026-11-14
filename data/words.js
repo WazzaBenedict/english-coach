@@ -99,7 +99,7 @@ remember|v.|/rɪˈmembər/|記得|I remember your name.|我記得你的名字。
 hope|v./n.|/hoʊp/|希望|I hope to see you soon.|希望很快再見到你。
 improve|v.|/ɪmˈpruːv/|改善、進步|I want to improve my English.|我想讓英文進步。
 invite|v.|/ɪnˈvaɪt/|邀請|She invited me to dinner.|她邀請我吃晚餐。
-practice|v./n.|/ˈpræktɪs/|練習|I practice speaking every day.|我每天練習口說。
+practice|v./n.|/ˈpræktɪs/|練習|I practise speaking every day.|我每天練習口說。
 prefer|v.|/prɪˈfɜːr/|比較喜歡|I prefer tea to coffee.|比起咖啡我更喜歡茶。
 repeat|v.|/rɪˈpiːt/|重複|Could you repeat that, please?|可以請你重複一次嗎？
 spend|v.|/spend/|花費（時間、錢）|I spend an hour on English.|我花一小時學英文。
@@ -126,7 +126,7 @@ medicine|n.|/ˈmedɪsən/|藥|Take this medicine twice a day.|這個藥一天吃
 headache|n.|/ˈhedeɪk/|頭痛|I have a headache.|我頭痛。
 available|adj.|/əˈveɪləbəl/|可用的、有空的|Is this seat available?|這個位子有人坐嗎？
 comfortable|adj.|/ˈkʌmftərbəl/|舒服的|This chair is comfortable.|這張椅子很舒服。
-convenient|adj.|/kənˈviːniənt/|方便的|The subway is convenient.|地鐵很方便。
+convenient|adj.|/kənˈviːniənt/|方便的|The underground is convenient.|地鐵很方便。
 crowded|adj.|/ˈkraʊdɪd/|擁擠的|The train is crowded.|火車很擠。
 different|adj.|/ˈdɪfrənt/|不同的|We have different ideas.|我們有不同的想法。
 important|adj.|/ɪmˈpɔːrtənt/|重要的|This is very important.|這非常重要。

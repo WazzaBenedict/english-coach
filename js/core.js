@@ -14,13 +14,17 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 // ---------- 狀態 ----------
 const DEFAULTS = {
   start: dateStr(),
-  settings: { rate: 0.8, pitch: 0.9, accent: 'GB', voice: '', newPerDay: 10, showZh: true },
+  settings: { rate: 0.8, pitch: 0.9, accent: 'GB', voice: '', newPerDay: 10, showZh: true, marks: true, onboarded: false, daily: 0 },
   cards: {},     // 單字 id -> { due, ivl, ease, reps }
   custom: [],    // 自訂單字
   log: {},       // 日期 -> { done: {taskId:true}, reviews, newCount }
   grammar: {},   // 課程 id -> 最佳答對題數
   dialogs: {},   // 場景 id -> true
   essays: {},    // 題目索引 -> 文字
+  cando: {},     // 場景 id -> 自評 1 到 3
+  lessonN: 0,    // 已完成的課數
+  lessonDate: '',// 最後完成課程的日期
+  lessonStep: null, // 進行中的課：{ n, i, types }
   essayT: {},    // 題目索引 -> 最後修改時間（同步用）
   removed: {},   // 已刪除的自訂單字 -> 刪除時間（同步用）
   settingsT: 0,  // 設定最後修改時間（同步用）
@@ -56,9 +60,12 @@ function markTask(id, on = true) {
 }
 function streak() {
   const active = (n) => { const d = new Date((n) * 864e5); const k = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; const l = S.log[k]; return !!l && (Object.keys(l.done || {}).length > 0 || l.reviews > 0); };
+  // 今天還沒做不算中斷；中間休息一天也不中斷（研究顯示漏一天對習慣影響很小）
   let n = dayNum(), count = 0;
-  if (!active(n)) n--;            // 今天還沒做不算中斷
-  while (active(n)) { count++; n--; }
+  if (!active(n)) n--;
+  while (true) {
+    if (active(n)) { count++; n--; } else if (count && active(n - 1)) n--; else break;
+  }
   return count;
 }
 function currentWeek() { return Math.max(1, Math.floor((dayNum() - dayNum(S.start)) / 7) + 1); }
@@ -126,10 +133,19 @@ function nextIntervalLabel(id, g) {
   const ivl = c.ivl === 0 ? (g === 3 ? 3 : 1) : Math.max(c.ivl + 1, Math.round(c.ivl * (g === 1 ? 1.2 : g === 2 ? c.ease : c.ease * 1.3)));
   return ivl >= 30 ? `${Math.round(ivl / 30)} 個月後` : `${ivl} 天後`;
 }
+// 句子複習卡：課程裡學過的句子，id 是 c:場景:第幾句
+function chunkItems() {
+  const out = [];
+  DIALOGUES.forEach((d) => d.lines.forEach((l, i) => {
+    const id = `c:${d.id}:${i}`;
+    if (S.cards[id]) out.push({ id, kind: 'chunk', en: l[1], zh: l[2] });
+  }));
+  return out;
+}
 function buildQueue() {
   const today = dayNum();
   const words = allWords();
-  const due = words.filter((w) => S.cards[w.id] && S.cards[w.id].due <= today);
+  const due = words.concat(chunkItems()).filter((w) => S.cards[w.id] && S.cards[w.id].due <= today);
   const left = Math.max(0, S.settings.newPerDay - todayLog().newCount);
   const fresh = words.filter((w) => !S.cards[w.id]);
   // 自訂單字優先，其餘依等級順序
@@ -138,12 +154,14 @@ function buildQueue() {
 }
 function wordStats() {
   const today = dayNum();
-  const cards = Object.values(S.cards);
+  const all = Object.entries(S.cards);
+  const cards = all.filter(([id]) => !id.startsWith('c:')).map(([, c]) => c);
   return {
     total: allWords().length,
+    chunks: all.length - cards.length,
     learned: cards.length,
     mature: cards.filter((c) => c.ivl >= 21).length,
-    due: cards.filter((c) => c.due <= today).length,
+    due: all.filter(([, c]) => c.due <= today).length,
   };
 }
 
@@ -183,12 +201,27 @@ const TTS = {
 };
 TTS.init();
 
+// 「聽不見的文法」：把容易聽不到的字尾（-s、-ed、縮寫）畫底線
+const NO_S = new Set(['this', 'yes', 'was', 'always', 'sometimes', 'perhaps', 'across', 'its', 'his', 'news', 'plus', 'bus', 'gas', 'upstairs', 'downstairs', 'towards', 'besides', 'thanks', 'alex', 'wales']);
+const NO_ED = new Set(['need', 'bed', 'red', 'feed', 'speed', 'hundred', 'indeed', 'seed', 'weed']);
+function markEnd(tok) {
+  if (S.settings.marks === false) return esc(tok);
+  const m = tok.match(/^(.*?)([.,!?;:]*)$/), core = m[1], punct = esc(m[2]);
+  const wrap = (a, b) => `${esc(a)}<u class="end">${esc(b)}</u>${punct}`;
+  let x = core.match(/^(.+?)(n['’]t|['’](?:s|m|re|ll|ve|d))$/i);
+  if (x) return wrap(x[1], x[2]);
+  const low = core.toLowerCase();
+  if (!/^[a-z]+$/.test(low)) return esc(tok);
+  if (low.length > 3 && low.endsWith('ed') && !NO_ED.has(low)) return wrap(core.slice(0, -2), core.slice(-2));
+  if (low.length > 2 && low.endsWith('s') && !/(ss|us|is)$/.test(low) && !NO_S.has(low)) return wrap(core.slice(0, -1), core.slice(-1));
+  return esc(tok);
+}
 // 把句子包成逐字 span，朗讀時可以逐字標示
 function spanify(text) {
   let i = 0;
   return text.split(/(\s+)/).map((tok) => {
     const start = i; i += tok.length;
-    return /\S/.test(tok) ? `<span class="w" data-i="${start}">${esc(tok)}</span>` : tok;
+    return /\S/.test(tok) ? `<span class="w" data-i="${start}">${markEnd(tok)}</span>` : tok;
   }).join('');
 }
 function speakEl(el, text, opt = {}) {

@@ -122,3 +122,15 @@ ul { padding-left: 1.2em; margin: 6px 0; }
 #toast.show { opacity: 1; }
 @media (max-width: 420px) { html { font-size: 17px; } .stats { gap: 6px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* 第二版：每日課程 */
+u.end { text-decoration: underline; text-decoration-color: var(--brand); text-decoration-thickness: 2px; text-underline-offset: 3px; font-weight: 700; }
+.steps { margin: 10px 0 14px; padding-left: 1.4em; }
+.steps li { padding: 2px 0; }
+.steps li.done { color: var(--muted); text-decoration: line-through; }
+.big-btn { width: 100%; font-size: 1.1rem; min-height: 56px; }
+.tiles, .slots { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.slots { min-height: 54px; padding: 8px; border: 2px dashed var(--line); border-radius: 12px; align-items: center; }
+.tile { min-height: 42px; padding: 6px 14px; font-size: 1.05rem; }
+.opts button.on, .tile.on { background: var(--soft); border-color: var(--brand); }
+[hidden] { display: none !important; }

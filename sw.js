@@ -1,6 +1,6 @@
 // 離線支援：優先用網路取得最新版本，沒有網路時改用快取
-const CACHE = 'english-coach-v3';
-const FILES = ['./', 'index.html', 'css/style.css', 'js/core.js', 'js/sync.js', 'js/views.js', 'data/plan.js', 'data/words.js', 'data/ipa-gb.js',
+const CACHE = 'english-coach-v4';
+const FILES = ['./', 'index.html', 'css/style.css', 'js/core.js', 'js/sync.js', 'js/lesson.js', 'js/home.js', 'js/views.js', 'data/units.js', 'data/plan.js', 'data/words.js', 'data/ipa-gb.js',
   'data/dialogues.js', 'data/sounds.js', 'data/grammar.js', 'data/ielts.js', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', (e) => {
