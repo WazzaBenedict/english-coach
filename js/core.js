@@ -14,7 +14,7 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 // ---------- 狀態 ----------
 const DEFAULTS = {
   start: dateStr(),
-  settings: { rate: 0.8, pitch: 0.9, voice: '', newPerDay: 10, showZh: true },
+  settings: { rate: 0.8, pitch: 0.9, accent: 'GB', voice: '', newPerDay: 10, showZh: true },
   cards: {},     // 單字 id -> { due, ivl, ease, reps }
   custom: [],    // 自訂單字
   log: {},       // 日期 -> { done: {taskId:true}, reviews, newCount }
@@ -78,9 +78,24 @@ function parseWords() {
   }
   return out;
 }
-const BASE_WORDS = parseWords();
+const RAW_WORDS = parseWords();
+// 口音：GB 英國（預設）或 US 美國。影響語音、語音辨識、音標和拼字
+const isGB = () => S.settings.accent !== 'US';
+const accentLang = () => (isGB() ? 'en-GB' : 'en-US');
+const accentRe = () => (isGB() ? /^en[-_]GB/i : /^en[-_]US/i);
+const gbSpell = (text) => text.replace(/\b(neighbor|behavior|realiz|analyz)/gi, (m) => {
+  const l = m.toLowerCase(), out = l === 'neighbor' ? 'neighbour' : l === 'behavior' ? 'behaviour' : l === 'realiz' ? 'realis' : 'analys';
+  return m[0] === l[0] ? out : out[0].toUpperCase() + out.slice(1);
+});
+function baseWords() {
+  if (!isGB()) return RAW_WORDS;
+  return RAW_WORDS.map((w) => Object.assign({}, w, { word: SPELL_GB[w.word] || w.word, ipa: IPA_GB[w.word] || w.ipa, ex: gbSpell(w.ex || '') }));
+}
+function pairsL() {
+  return isGB() ? PAIRS.map((p) => Object.assign({}, p, p.gb || {})) : PAIRS;
+}
 function allWords() {
-  return BASE_WORDS.concat(S.custom.map((c) => Object.assign({ level: 'MY', pos: '', ipa: '', ex: '', exZh: '' }, c, { id: 'my:' + c.word })));
+  return baseWords().concat(S.custom.map((c) => Object.assign({ level: 'MY', pos: '', ipa: '', ex: '', exZh: '' }, c, { id: 'my:' + c.word })));
 }
 
 // 間隔重複：g = 0 忘記, 1 困難, 2 記得, 3 簡單
@@ -143,10 +158,11 @@ const TTS = {
     speechSynthesis.addEventListener('voiceschanged', load);
   },
   voice() {
-    return this.voices.find((v) => v.name === S.settings.voice)
-      || this.voices.find((v) => /en[-_]US/i.test(v.lang) && v.localService)
-      || this.voices.find((v) => /en[-_]US/i.test(v.lang))
-      || this.voices[0] || null;
+    // 只用符合目前口音的語音；裝置沒有這個口音的語音時回傳 null，交給瀏覽器依語言挑選
+    const list = this.voices.filter((v) => accentRe().test(v.lang));
+    return list.find((v) => v.name === S.settings.voice)
+      || list.find((v) => v.localService)
+      || list[0] || null;
   },
   stop() { if (this.ok) speechSynthesis.cancel(); },
   // opt: { rate, onword(charIndex), onend() }
@@ -155,7 +171,7 @@ const TTS = {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     const v = this.voice();
-    if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-US';
+    if (v) { u.voice = v; u.lang = v.lang; } else u.lang = accentLang();
     u.rate = opt.rate || S.settings.rate;
     u.pitch = S.settings.pitch;
     let ended = false;
@@ -199,7 +215,7 @@ function startListening(opt) {
   if (!SR) { toast('這個瀏覽器不支援語音辨識，請改用電腦或 Android 的 Chrome、Edge'); return null; }
   stopListening(); TTS.stop();
   const r = new SR();
-  r.lang = 'en-US'; r.continuous = !!opt.continuous; r.interimResults = !!opt.oninterim;
+  r.lang = accentLang(); r.continuous = !!opt.continuous; r.interimResults = !!opt.oninterim;
   r.onresult = (e) => {
     let fin = '', inter = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -256,6 +272,6 @@ function toast(msg) {
 function allSentences() {
   const out = [];
   DIALOGUES.forEach((d) => d.lines.forEach((l) => out.push({ en: l[1], zh: l[2] })));
-  BASE_WORDS.forEach((w) => { if (w.ex) out.push({ en: w.ex, zh: w.exZh }); });
+  baseWords().forEach((w) => { if (w.ex) out.push({ en: w.ex, zh: w.exZh }); });
   return out;
 }

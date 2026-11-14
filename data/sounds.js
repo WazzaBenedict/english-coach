@@ -33,7 +33,7 @@ const PAIRS = [
   { a: 'sit', ia: '/sɪt/', b: 'seat', ib: '/siːt/', hint: 'seat 的母音長，嘴角拉開。' },
   { a: 'bed', ia: '/bed/', b: 'bad', ib: '/bæd/', hint: 'bad 的嘴巴張得更大。' },
   { a: 'light', ia: '/laɪt/', b: 'right', ib: '/raɪt/', hint: '/r/ 嘴唇變圓，舌頭不碰上顎。' },
-  { a: 'walk', ia: '/wɔːk/', b: 'work', ib: '/wɜːrk/', hint: 'work 有捲舌的 r 音。' },
+  { a: 'walk', ia: '/wɔːk/', b: 'work', ib: '/wɜːrk/', hint: 'work 有捲舌的 r 音。', gb: { ib: '/wɜːk/', hint: '英式發音不捲舌。walk 嘴唇嘟圓，work 嘴巴放鬆、嘴角平。' } },
   { a: 'fifteen', ia: '/ˌfɪfˈtiːn/', b: 'fifty', ib: '/ˈfɪfti/', hint: 'fifteen 重音在後面而且拉長，fifty 重音在前面。不確定就問：one five or five zero?' },
-  { a: 'can', ia: '/kən/', b: 'can\'t', ib: '/kænt/', hint: 'can\'t 的母音又重又清楚，can 通常很輕。不確定就問：You can, or you cannot?' },
+  { a: 'can', ia: '/kən/', b: 'can\'t', ib: '/kænt/', hint: 'can\'t 的母音又重又清楚，can 通常很輕。不確定就問：You can, or you cannot?' , gb: { ib: '/kɑːnt/', hint: '英式的 can\'t 母音是拉長的「啊」，嘴巴張大，和 can 差很多，比美式好分辨。' } },
 ];

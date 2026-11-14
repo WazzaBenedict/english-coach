@@ -238,7 +238,7 @@ function listen(mode) {
 
   if (mode === 'pairs') {
     let right = 0, n = 0, cur, ans, answered;
-    const next = () => { cur = pick(PAIRS); ans = Math.random() < 0.5 ? 'a' : 'b'; answered = null; draw(); TTS.speak(cur[ans]); };
+    const next = () => { cur = pick(pairsL()); ans = Math.random() < 0.5 ? 'a' : 'b'; answered = null; draw(); TTS.speak(cur[ans]); };
     const draw = () => {
       app.innerHTML = `${tabs}
         <p class="muted">聽到的是哪一個字？可以重播無限次。高頻子音聽不出來很正常，答完看下面的提示，學會用嘴型和母音長度來分辨。</p>
@@ -261,7 +261,7 @@ function listen(mode) {
       });
       const nb = $('#next'); if (nb) nb.onclick = next;
     };
-    cur = pick(PAIRS); ans = Math.random() < 0.5 ? 'a' : 'b'; answered = null; draw();
+    cur = pick(pairsL()); ans = Math.random() < 0.5 ? 'a' : 'b'; answered = null; draw();
     return;
   }
 
@@ -476,8 +476,12 @@ function settings() {
     <div class="card">
       <b>聲音</b>
       <p class="muted">建議戴耳機或助聽器。每個語音的清晰度不同，逐一試聽，選你聽得最清楚的。</p>
+      <label>口音</label>
+      ${seg([['GB', '🇬🇧 英國'], ['US', '🇺🇸 美國']], isGB() ? 'GB' : 'US', 'data-accent')}
+      <p class="muted">口音會一起改變朗讀的聲音、語音辨識、音標和拼字。IELTS 的聽力以英國口音為主。</p>
+      ${TTS.ok && TTS.voices.length && !TTS.voices.some((v) => accentRe().test(v.lang)) ? `<div class="note">這台裝置沒有安裝${isGB() ? '英國' : '美國'}口音的語音，瀏覽器可能會用其他口音朗讀。電腦請改用 Edge 或 Chrome；手機請到系統的「文字轉語音」設定下載 English (United Kingdom) 語音。</div>` : ''}
       <label for="voice">語音</label>
-      <select id="voice"><option value="">自動選擇</option>${TTS.voices.map((v) => `<option value="${esc(v.name)}" ${v.name === s.voice ? 'selected' : ''}>${esc(v.name)}（${esc(v.lang)}）</option>`).join('')}</select>
+      <select id="voice"><option value="">自動選擇</option>${TTS.voices.filter((v) => accentRe().test(v.lang)).map((v) => `<option value="${esc(v.name)}" ${v.name === s.voice ? 'selected' : ''}>${esc(v.name)}（${esc(v.lang)}）</option>`).join('')}</select>
       <label for="rate">語速 <span id="rv">${s.rate}</span></label>
       <input type="range" id="rate" min="0.4" max="1.2" step="0.05" value="${s.rate}">
       <label for="pitch">音高 <span id="pv">${s.pitch}</span></label>
@@ -515,6 +519,7 @@ function settings() {
       <div class="row"><button id="exp">匯出備份</button><button id="imp">匯入備份</button><button id="reset">清除全部進度</button></div>
       <input type="file" id="file" accept="application/json,.json" hidden>
     </div>`;
+  $$('[data-accent]').forEach((b) => b.onclick = () => { s.accent = b.dataset.accent; s.voice = ''; saveSettings(); settings(); TTS.speak('Could you speak a little slower, please?'); });
   $('#voice').onchange = (e) => { s.voice = e.target.value; saveSettings(); };
   $('#rate').oninput = (e) => { s.rate = Number(e.target.value); $('#rv').textContent = s.rate; saveSettings(); };
   $('#pitch').oninput = (e) => { s.pitch = Number(e.target.value); $('#pv').textContent = s.pitch; saveSettings(); };
