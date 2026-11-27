@@ -62,6 +62,10 @@ function mergeStates(a, b) {
   m.dialogs = Object.assign({}, b.dialogs, a.dialogs);
   m.cando = Object.assign({}, a.cando);
   for (const [id, l] of Object.entries(b.cando || {})) m.cando[id] = Math.max(m.cando[id] || 0, l);
+  // 每週練習：取較新的一週，同一週就合併
+  const wa = a.week, wb = b.week;
+  if (wb && (!wa || wb.id > wa.id)) m.week = wb;
+  else if (wa && wb && wa.id === wb.id) m.week = { id: wa.id, done: Object.assign({}, wa.done, wb.done) };
   // 課程進度：取上得比較多的那一邊
   const an = a.lessonN || 0, bn = b.lessonN || 0;
   if (bn > an) { m.lessonN = bn; m.lessonDate = b.lessonDate || ''; m.lessonStep = b.lessonStep || null; }

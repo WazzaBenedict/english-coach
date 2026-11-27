@@ -25,6 +25,7 @@ const DEFAULTS = {
   lessonN: 0,    // 已完成的課數
   lessonDate: '',// 最後完成課程的日期
   lessonStep: null, // 進行中的課：{ n, i, types }
+  week: null,    // App 以外的每週練習：{ id, done: {key:true} }
   essayT: {},    // 題目索引 -> 最後修改時間（同步用）
   removed: {},   // 已刪除的自訂單字 -> 刪除時間（同步用）
   settingsT: 0,  // 設定最後修改時間（同步用）
@@ -68,10 +69,52 @@ function streak() {
   }
   return count;
 }
+// App 以外的每週練習（星期一換新的一週）
+const weekId = () => Math.floor((dayNum() + 3) / 7);
+function weekDone() { return S.week && S.week.id === weekId() ? S.week.done : {}; }
+function setWeekDone(key, on) {
+  if (!S.week || S.week.id !== weekId()) S.week = { id: weekId(), done: {} };
+  if (on) S.week.done[key] = true; else delete S.week.done[key];
+  save();
+}
 function currentWeek() { return Math.max(1, Math.floor((dayNum() - dayNum(S.start)) / 7) + 1); }
 function currentPhase() {
   const w = currentWeek();
   return PHASES.find((p) => w >= p.weeks[0] && w <= p.weeks[1]) || PHASES[PHASES.length - 1];
+}
+
+// ---------- 錄音（錄下自己的聲音再聽一次，只存在記憶體，不會上傳） ----------
+const Rec = {
+  ok: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder),
+  rec: null, url: '',
+  async start(onstop) {
+    this.stop();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const chunks = [], rec = new MediaRecorder(stream);
+    rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+    rec.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      if (this.url) URL.revokeObjectURL(this.url);
+      this.url = URL.createObjectURL(new Blob(chunks, { type: rec.mimeType || 'audio/webm' }));
+      if (this.rec === rec) this.rec = null;
+      onstop(this.url);
+    };
+    this.rec = rec; rec.start();
+  },
+  stop() { if (this.rec && this.rec.state !== 'inactive') this.rec.stop(); },
+};
+// 在 box 裡的 #rec 按鈕與 #recOut 區塊接上錄音
+function wireRec(box) {
+  const b = $('#rec', box), out = $('#recOut', box);
+  if (!b || !out) return;
+  b.onclick = async () => {
+    if (Rec.rec) return Rec.stop();
+    try {
+      TTS.stop();
+      await Rec.start((url) => { b.textContent = '⏺ 重錄'; b.classList.remove('on'); out.hidden = false; out.innerHTML = `<audio controls src="${url}" style="width:100%"></audio><div class="muted">聽聽看自己的聲音，和示範比一比字尾有沒有唸出來。</div>`; });
+      b.textContent = '■ 停止錄音'; b.classList.add('on');
+    } catch (e) { toast('無法使用麥克風，請在瀏覽器允許麥克風權限'); }
+  };
 }
 
 // ---------- 單字 ----------
@@ -81,6 +124,14 @@ function parseWords() {
     text.trim().split('\n').forEach((row) => {
       const [word, pos, ipa, zh, ex, exZh] = row.split('|');
       if (word && zh) out.push({ id: word, word, pos, ipa, zh, ex, exZh, level });
+    });
+  }
+  // 第二冊的單元單字：上到那個單元才會出現
+  if (typeof UNIT_WORDS !== 'undefined') for (const [unit, [level, text]] of Object.entries(UNIT_WORDS)) {
+    const seen = new Set(out.map((w) => w.id));
+    text.trim().split('\n').forEach((row) => {
+      const [word, pos, ipa, zh, ex, exZh] = row.split('|');
+      if (word && zh && !seen.has(word)) out.push({ id: word, word, pos, ipa, zh, ex, exZh, level, unit });
     });
   }
   return out;
@@ -142,14 +193,21 @@ function chunkItems() {
   }));
   return out;
 }
+// 還沒學的字，依教學順序排列：自訂單字、目前單元的字、其餘依等級；之後單元的字先不出現。
+// strict 為 true 時（每日課程用），學術單字要等 24 個單元都上完才出現。
+function freshPool(strict) {
+  const n = (S.lessonN || 0) + 1, inCourse = n <= UNITS.length * 4, cur = inCourse ? Math.floor((n - 1) / 4) : Infinity;
+  const ui = {}; UNITS.forEach((u, i) => { ui[u.d] = i; });
+  const rank = (w) => (w.level === 'MY' ? 0 : w.unit && ui[w.unit] === cur ? 1 : w.level === 'IELTS' ? 3 : 2);
+  return allWords().filter((w) => !S.cards[w.id] && !(w.unit && ui[w.unit] > cur) && !(strict && inCourse && w.level === 'IELTS'))
+    .map((w, i) => [w, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map((x) => x[0]);
+}
 function buildQueue() {
   const today = dayNum();
   const words = allWords();
   const due = words.concat(chunkItems()).filter((w) => S.cards[w.id] && S.cards[w.id].due <= today);
   const left = Math.max(0, S.settings.newPerDay - todayLog().newCount);
-  const fresh = words.filter((w) => !S.cards[w.id]);
-  // 自訂單字優先，其餘依等級順序
-  fresh.sort((a, b) => (a.level === 'MY' ? -1 : 0) - (b.level === 'MY' ? -1 : 0));
+  const fresh = freshPool(false);
   return { due: shuffle(due), fresh: fresh.slice(0, left), freshTotal: fresh.length };
 }
 function wordStats() {

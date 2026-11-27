@@ -76,7 +76,7 @@ label { display: block; margin: 12px 0 4px; font-weight: 600; }
 .seg { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
 
 .flash { text-align: center; padding: 28px 16px; }
-.flash .w { font-size: 2.2rem; font-weight: 700; line-height: 1.2; word-break: break-word; }
+.flash > .w { font-size: 2.2rem; font-weight: 700; line-height: 1.2; word-break: break-word; }
 .ipa { font-family: "Segoe UI", "Lucida Sans Unicode", "Noto Sans", sans-serif; color: var(--muted); font-size: 1.05rem; }
 .flash .zh { font-size: 1.3rem; margin-top: 14px; }
 .grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
@@ -134,3 +134,8 @@ u.end { text-decoration: underline; text-decoration-color: var(--brand); text-de
 .tile { min-height: 42px; padding: 6px 14px; font-size: 1.05rem; }
 .opts button.on, .tile.on { background: var(--soft); border-color: var(--brand); }
 [hidden] { display: none !important; }
+
+/* 給對方看的大字卡 */
+.showcard { position: fixed; inset: 0; z-index: 50; background: #fff; color: #111; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; font-size: 2rem; font-weight: 700; line-height: 1.4; white-space: pre-line; }
+details.card > summary { cursor: pointer; }
+details.card textarea { font: inherit; font-size: .85rem; padding: 8px; border-radius: 8px; border: 1px solid var(--line, #ccc); background: transparent; color: inherit; box-sizing: border-box; }

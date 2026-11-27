@@ -226,7 +226,7 @@ function sounds() {
 function grammar(id) {
   const g = GRAMMAR.find((x) => x.id === id);
   if (!g) {
-    app.innerHTML = `<h1>文法</h1><p class="muted">10 課基礎文法，足夠應付日常溝通。每課讀完做 4 題測驗。</p>
+    app.innerHTML = `<h1>文法</h1><p class="muted">${GRAMMAR.length} 課基礎文法，足夠應付日常溝通。每課讀完做 4 題測驗。</p>
       <div class="card list">${GRAMMAR.map((x, i) => `
         <a class="item" href="#/grammar/${x.id}"><span>${i + 1}. ${esc(x.title)}</span>${x.id in S.grammar ? `<span class="pill ${S.grammar[x.id] === x.quiz.length ? 'ok' : ''}">${S.grammar[x.id]} / ${x.quiz.length}</span>` : '<span class="muted">›</span>'}</a>`).join('')}
       </div>`;
@@ -353,7 +353,7 @@ function ielts(tab) {
 
 // ---------- 更多 ----------
 function more() {
-  const items = [['#/sounds', '發音嘴型指南', '用看的學發音'], ['#/grammar', '文法', '10 課基礎文法與測驗'], ['#/ielts', 'IELTS', '建議第四階段再開始。考試介紹、聽障考生安排、口說與寫作'],
+  const items = [['#/sounds', '發音嘴型指南', '用看的學發音'], ['#/grammar', '文法', `${GRAMMAR.length} 課基礎文法與測驗`], ['#/numbers', '數字聽力', '價錢、時間、日期，十五還是五十'], ['#/sos', '聽不懂時的救急句', '12 句，還有給對方看的大字卡'], ['#/ielts', 'IELTS', '建議第四階段再開始。考試介紹、聽障考生安排、口說與寫作'],
     ['#/wordlist', '單字表', '查看全部單字、加入自訂單字'], ['#/plan', '學習路線', '分段目標與我可以做到的事'], ['#/settings', '設定', '口音、語音、語速、同步與備份']];
   app.innerHTML = `<h1>更多</h1><div class="card list">${items.map((i) => `
     <a class="item" href="${i[0]}"><span><b>${i[1]}</b><br><span class="muted">${i[2]}</span></span><span class="muted">›</span></a>`).join('')}</div>`;
@@ -464,8 +464,33 @@ function settings() {
 }
 
 // ---------- 路由 ----------
-const ROUTES = { '': home, lesson, start, words, wordlist, talk, listen, sounds, grammar, ielts, plan, more, settings };
-const TAB_OF = { '': '', lesson: '', start: '', words: 'words', wordlist: 'words', talk: 'talk', listen: 'listen', sounds: 'listen' };
+// ---------- 數字聽力（自由練習） ----------
+function numbers() {
+  app.innerHTML = '<h1>數字聽力</h1><div id="box"></div>';
+  const again = () => {
+    markTask('numbers');
+    $('#box').innerHTML = '<div class="card flash"><div class="big">做完 3 題</div><p class="muted">數字每天練一點最有效。</p><button class="primary" id="more">再做 3 題</button></div>';
+    $('#more').onclick = () => STEPS.nums($('#box'), again);
+  };
+  STEPS.nums($('#box'), again);
+}
+
+// ---------- 聽不懂時的救急句 ----------
+function sos() {
+  app.innerHTML = `<h1>聽不懂時的救急句</h1>
+    <p class="muted">聽不懂不是你的錯，會開口問才是會溝通。前三句最短，先練到不用想。</p>
+    <div class="card">${REPAIR.map((r, i) => `<div class="line"><div class="en" id="rp${i}">${spanify(r[0])}</div><div class="zh">${esc(r[1])}${r[2] ? ` <span class="pill">${esc(r[2])}</span>` : ''}</div>${sayPair(r[0], 'rp' + i)}</div>`).join('')}</div>
+    <h2>給對方看的大字卡</h2>
+    <p class="muted">說不出口或環境太吵時，點一張卡片，把手機拿給對方看。再點一下畫面就關閉。</p>
+    <div class="card list">${SHOW_CARDS.map((c, i) => `<button class="item" data-card="${i}" style="width:100%;text-align:left"><span><b>${esc(c[0].replace('\n', ' '))}</b><br><span class="muted">${esc(c[1])}</span></span><span class="muted">›</span></button>`).join('')}</div>
+    <div id="showcard" class="showcard" hidden></div>`;
+  const sc = $('#showcard');
+  $$('[data-card]').forEach((b) => { b.onclick = () => { sc.textContent = SHOW_CARDS[Number(b.dataset.card)][0]; sc.hidden = false; }; });
+  sc.onclick = () => { sc.hidden = true; };
+}
+
+const ROUTES = { '': home, lesson, start, words, wordlist, talk, listen, sounds, grammar, ielts, plan, more, settings, numbers, sos };
+const TAB_OF = { '': '', lesson: '', start: '', words: 'words', wordlist: 'words', talk: 'talk', listen: 'listen', sounds: 'listen', numbers: 'listen' };
 function route() {
   cleanups.forEach((fn) => { try { fn(); } catch (e) { /* 忽略 */ } });
   cleanups = [];

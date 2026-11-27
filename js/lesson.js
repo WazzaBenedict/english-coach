@@ -1,14 +1,13 @@
 'use strict';
 // 每日引導課：把複習、會話、新字、跟讀、組句、聽寫、角色扮演排成一堂照順序做的課。
 // 課程依「完成了幾堂」前進，不是依日期，所以漏掉一天不會跳過內容。
-// 12 個單元，每單元 3 堂一般課（各學一段對話）加 1 堂整合課；全部完成後進入複習課。
+// 24 個單元（兩冊），每單元 3 堂一般課（各學一段對話）加 1 堂整合課；全部完成後進入複習課。
 
 const STEP_INFO = {
   review: ['複習', 3], dialog: ['今日會話', 4], fresh: ['新單字', 5], shadow: ['跟讀', 5], build: ['組句', 3],
-  dict: ['聽寫', 2], pairs: ['辨音', 2], recall: ['看中文說英文', 3], sub: ['替換練習', 4], roleplay: ['角色扮演', 5],
+  dict: ['聽寫', 2], pairs: ['辨音', 2], nums: ['數字聽力', 2], recall: ['看中文說英文', 3], sub: ['替換練習', 4], roleplay: ['角色扮演', 5],
   grammar: ['文法', 5], reading: ['短文閱讀', 4], cando: ['我可以', 1], ielts: ['IELTS 問答', 3],
 };
-const NEW_PER_LESSON = 6;
 const PER_UNIT = 4;
 const TOTAL_LESSONS = UNITS.length * PER_UNIT;
 
@@ -30,16 +29,44 @@ function lessonContent(n) {
   const j = n - TOTAL_LESSONS - 1, u = j % UNITS.length, unit = UNITS[u], d = dialogOf(unit);
   return { mode: 'review', unit, u, k: 0, d, lines: d.lines, offset: 0, q: IELTS.speak['Part 1'][j % IELTS.speak['Part 1'].length] };
 }
-function freshWords() {
-  return allWords().filter((w) => !S.cards[w.id]).sort((a, b) => (a.level === 'MY' ? -1 : 0) - (b.level === 'MY' ? -1 : 0)).slice(0, NEW_PER_LESSON);
-}
+// 第一冊每課 5 個新字、第二冊每課 4 個，剛好平均分到每一堂一般課
+const freshWords = () => freshPool(true).slice(0, (S.lessonN || 0) < 48 ? 5 : 4);
 function lessonTypes(n) {
   const c = lessonContent(n), t = [];
   if (buildQueue().due.length) t.push('review');
-  if (c.mode === 'learn') { t.push('dialog'); if (freshWords().length) t.push('fresh'); t.push('shadow', 'build', 'dict', 'pairs', 'recall'); }
+  if (c.mode === 'learn') { t.push('dialog'); if (freshWords().length) t.push('fresh'); t.push('shadow', 'build', 'dict', c.k === 1 ? 'nums' : 'pairs', 'recall'); }
   else if (c.mode === 'integrate') { t.push('dialog', 'sub', 'roleplay'); if (c.unit.grammar) t.push('grammar'); t.push('reading', 'cando'); }
   else t.push('dialog', 'roleplay', 'dict', 'ielts');
   return t;
+}
+// ---------- 數字聽力題：十幾與幾十、價錢、時間、日期 ----------
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+const ORD = { 1: 'first', 2: 'second', 3: 'third', 4: 'fourth', 5: 'fifth', 12: 'twelfth', 13: 'thirteenth', 14: 'fourteenth', 15: 'fifteenth', 16: 'sixteenth', 17: 'seventeenth', 18: 'eighteenth', 19: 'nineteenth', 20: 'twentieth', 30: 'thirtieth' };
+const numWord = (n) => (n < 20 ? ONES[n] : TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : ''));
+function numQuestion() {
+  const teen = pick([13, 14, 15, 16, 17, 18, 19]), ty = (teen - 10) * 10, useTeen = Math.random() < 0.5;
+  const kind = pick(['teen', 'price', 'time', 'date']);
+  const teenTip = '-teen 的重音在後面，尾巴有 n；-ty 的重音在前面。聽不清楚就問：One ' + ONES[teen - 10] + ', or ' + ONES[teen - 10] + ' zero?';
+  if (kind === 'teen') {
+    const n = useTeen ? teen : ty;
+    return { say: numWord(n), answer: String(n), opts: [String(teen), String(ty)], tip: teenTip };
+  }
+  if (kind === 'price') {
+    const a = useTeen ? teen : ty, p = pick([20, 50, 99]);
+    const f = (x) => `£${x}.${p}`;
+    return { say: `${numWord(a)} pounds ${numWord(p)}`, answer: f(a), opts: [f(teen), f(ty)], tip: '英國人說價錢常省略 pence：' + numWord(a) + ' pounds ' + numWord(p) + '。' + teenTip };
+  }
+  if (kind === 'time') {
+    const h = pick([2, 3, 4, 5, 6, 7, 8, 9, 10]), form = pick(['half', 'qp', 'qt', 'tt']);
+    const pad2 = (m) => String(m).padStart(2, '0');
+    const T = { half: [`half past ${ONES[h]}`, `${h}:30`], qp: [`quarter past ${ONES[h]}`, `${h}:15`], qt: [`quarter to ${ONES[h]}`, `${h - 1}:45`], tt: [`ten to ${ONES[h]}`, `${h - 1}:50`] }[form];
+    const wrong = { half: [`${h - 1}:30`, `${h}:15`], qp: [`${h - 1}:45`, `${h}:45`], qt: [`${h}:45`, `${h}:15`], tt: [`${h}:10`, `${h}:50`] }[form];
+    return { say: T[0], answer: T[1], opts: shuffle([T[1]].concat(wrong)), tip: 'past 是「過了」，to 是「差幾分到」。half past 是 30 分，quarter 是 15 分。' };
+  }
+  const d = useTeen ? teen : 30, alt = useTeen ? 30 : pick([13, 14, 15]), month = pick(['May', 'June', 'July', 'March']);
+  const useD = Math.random() < 0.5 ? d : alt;
+  return { say: `the ${ORD[useD]} of ${month}`, answer: `${useD} ${month}`, opts: [d, alt].sort((x, y) => x - y).map((x) => `${x} ${month}`), tip: '日期用序數：thirteenth（13 日）和 thirtieth（30 日）很像。最保險的做法是請對方寫下來。' };
 }
 const lessonMinutes = (types) => types.reduce((m, t) => m + STEP_INFO[t][1], 0);
 function lessonTitle(n) {
@@ -51,9 +78,13 @@ function lessonTitle(n) {
 // 目前這一課的狀態。不同裝置同步後可以接續
 function lessonState() {
   const n = (S.lessonN || 0) + 1;
-  const st = S.lessonStep && S.lessonStep.n === n ? S.lessonStep : null;
+  const st = S.lessonStep && S.lessonStep.n === n && S.lessonStep.v === 3 ? S.lessonStep : null;
   return { n, i: st ? st.i : 0, types: st ? st.types : lessonTypes(n), started: !!st && st.i > 0 };
 }
+const aiPrompt = (c) => `Please be my English conversation partner. I am an adult beginner (CEFR A1 to A2) learning British English, and I am hard of hearing.
+Let's role-play a conversation like this model:
+${c.d.lines.map((l) => `${l[0]}: ${l[1]}`).join('\n')}
+Rules: You are A and I am B. Change the details so it is a new conversation. Say one short, simple sentence at a time, then wait for me. Always show your words as text too. If I make a mistake, reply naturally first, then show the correct sentence on one line. After about eight turns, tell me two things I did well and one thing to practise. Use Traditional Chinese only if I ask for help.`;
 const myLines = (c) => { const b = c.lines.filter((l) => l[0] === 'B'); return b.length ? b : c.lines; };
 const lineHtml = (l, id) => `<div><span class="who ${l[0] === 'B' ? 'me' : ''}">${l[0]}</span><span class="en" id="${id}">${spanify(l[1])}</span></div>`;
 const centre = 'style="justify-content:center;margin-top:12px"';
@@ -185,13 +216,14 @@ const STEPS = {
     let i = 0;
     const draw = () => {
       const l = lines[i];
-      box.innerHTML = `<p class="muted">第 ${i + 1} / ${lines.length} 句。先聽，再跟著大聲唸 3 次。嘴型做大，速度放慢，字尾要唸出來。</p>
+      box.innerHTML = `<p class="muted">第 ${i + 1} / ${lines.length} 句。先看字聽一次，停一下，在腦中重播剛才的聲音，再大聲唸 3 次。嘴型做大，速度放慢，字尾要唸出來。</p>
         <div class="card">${lineHtml(l, 'sl')}<div class="zh">${esc(l[2])}</div>
-          <div class="row" style="margin-top:8px">${sayPair(l[1], 'sl')}${SR ? '<button class="small" id="mic">🎤 跟讀檢查</button>' : ''}</div>
-          <div class="result" id="sr" hidden></div>
+          <div class="row" style="margin-top:8px">${sayPair(l[1], 'sl')}${SR ? '<button class="small" id="mic">🎤 跟讀檢查</button>' : ''}${Rec.ok ? '<button class="small" id="rec">⏺ 錄下自己</button>' : ''}</div>
+          <div class="result" id="sr" hidden></div><div class="result" id="recOut" hidden></div>
           <button class="primary" id="k" style="margin-top:14px">我唸了 3 次${i < lines.length - 1 ? '，下一句' : ''}</button></div>
         ${SR ? '<p class="muted">跟讀檢查會把你說的話轉成文字，只當參考。機器聽錯很常見，你覺得說對了就繼續。</p>' : ''}`;
       speakEl($('#sl'), l[1]);
+      wireRec(box);
       const mic = $('#mic');
       if (mic) mic.onclick = () => startListening({
         onfinal: (text) => {
@@ -202,7 +234,7 @@ const STEPS = {
         },
         onstate: (on) => { mic.textContent = on ? '🔴 請說…' : '🎤 跟讀檢查'; mic.classList.toggle('on', on); },
       });
-      $('#k').onclick = () => { TTS.stop(); stopListening(); i++; if (i < lines.length) draw(); else done(); };
+      $('#k').onclick = () => { TTS.stop(); stopListening(); Rec.stop(); i++; if (i < lines.length) draw(); else done(); };
     };
     draw();
   },
@@ -284,8 +316,28 @@ const STEPS = {
     ask();
   },
 
+  nums(box, done) {
+    const qs = [numQuestion(), numQuestion(), numQuestion()];
+    let i = 0;
+    const ask = () => {
+      const q = qs[i];
+      let picked = null;
+      const draw = () => {
+        box.innerHTML = `<p class="muted">第 ${i + 1} / ${qs.length} 題。聽到的是哪一個？可以一直重播。數字是最容易聽錯的地方，這一步不計分。</p>
+          <div class="card"><div class="row">${sayBtn(q.say, '', '▶ 播放題目')}${sayBtn(q.say, '', '🐢 慢速', '0.5')}</div>
+            <div class="choices">${q.opts.map((o) => `<button data-o="${esc(o)}" class="${picked ? (o === q.answer ? 'right' : o === picked ? 'wrong' : '') : ''}" ${picked ? 'disabled' : ''}>${esc(o)}</button>`).join('')}</div>
+            ${picked ? `<div class="result ${picked === q.answer ? 'ok' : ''}">${picked === q.answer ? '✓ 答對了' : '答案是 ' + esc(q.answer)}。<div class="en" id="nq">${spanify(q.say)}</div>${esc(q.tip)}</div>
+              <div class="row" style="margin-top:10px">${sayPair(q.say, 'nq')}<button class="primary" id="k">${i < qs.length - 1 ? '下一題' : '完成'}</button></div>` : ''}</div>`;
+        $$('[data-o]', box).forEach((b) => b.onclick = () => { picked = b.dataset.o; draw(); });
+        const k = $('#k'); if (k) k.onclick = () => { TTS.stop(); i++; if (i < qs.length) ask(); else done(); };
+      };
+      draw(); TTS.speak(q.say);
+    };
+    ask();
+  },
+
   recall(box, done, c) {
-    const lines = shuffle(myLines(c)).slice(0, 3);
+    const lines = shuffle(c.mode === 'learn' ? c.lines : myLines(c)).slice(0, 3);
     let i = 0, shown = false;
     const draw = () => {
       const l = lines[i];
@@ -420,7 +472,15 @@ const STEPS = {
         <div class="opts" style="margin-top:16px">
           <button data-l="3">可以，不用看字也說得出來</button>
           <button data-l="2">差不多，偶爾要看一下</button>
-          <button data-l="1">還不行，需要再練</button></div></div>`;
+          <button data-l="1">還不行，需要再練</button></div></div>
+      <details class="card"><summary><b>想多練？用 AI 語音對話練這個場景</b></summary>
+        <p class="muted">研究顯示和對話系統練習對初學者的口說有幫助，而且要用「說的」才會進步到口說。複製下面的提示詞，貼到任何有語音對話功能的 AI（例如 Claude 或 ChatGPT），打開語音和字幕一起用。這段文字不含你的個人資料。</p>
+        <textarea id="aip" readonly rows="6" style="width:100%">${esc(aiPrompt(c))}</textarea>
+        <button id="copy" style="margin-top:8px">複製提示詞</button></details>`;
+    $('#copy').onclick = () => {
+      const t = $('#aip'); t.select();
+      (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(() => toast('已複製')).catch(() => { try { document.execCommand('copy'); toast('已複製'); } catch (e) { toast('請手動選取文字複製'); } });
+    };
     $$('[data-l]', box).forEach((b) => b.onclick = () => { S.cando[c.unit.d] = Math.max(S.cando[c.unit.d] || 0, Number(b.dataset.l)); save(); done(); });
   },
 
@@ -455,8 +515,8 @@ function lesson(arg) {
   const c = lessonContent(n);
   const types = mini ? (buildQueue().due.length ? ['review', 'recall'] : ['recall']) : st.types;
   let i = mini ? 0 : st.i;
-  const persist = () => { if (mini) return; S.lessonStep = { n, i, types }; save(); };
-  if (!mini && (!S.lessonStep || S.lessonStep.n !== n)) persist();
+  const persist = () => { if (mini) return; S.lessonStep = { n, i, types, v: 3 }; save(); };
+  if (!mini && (!S.lessonStep || S.lessonStep.n !== n || S.lessonStep.v !== 3)) persist();
   onLeave(() => { lessonToken++; });
 
   const finish = () => {
@@ -479,7 +539,7 @@ function lesson(arg) {
   };
 
   const draw = () => {
-    TTS.stop(); stopListening(); lessonToken++;
+    TTS.stop(); stopListening(); Rec.stop(); lessonToken++;
     if (i >= types.length) return finish();
     const type = types[i];
     app.innerHTML = `

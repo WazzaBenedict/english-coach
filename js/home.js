@@ -12,6 +12,7 @@ function start() {
       <div class="card"><table>
         <tr><th style="white-space:nowrap">3 個月</th><td>能用慢速、簡單的句子和有耐心的外國人對話。<b>做得到。</b></td></tr>
         <tr><th>1 年</th><td>日常話題大致能溝通，約 IELTS 4.5 到 5.5。</td></tr>
+        <tr><th>依據</th><td class="muted">劍橋英語的參考時數：從零到 A2 約 180 到 200 小時，到 B1 約 350 到 400 小時。這只是參考值，中文母語者通常要更久。</td></tr>
         <tr><th>之後</th><td>IELTS 8.5 等於接近母語者的程度，從基礎出發通常需要好幾年。它是方向，每個階段的小目標才是每天的動力。</td></tr>
       </table></div>
       <div class="note">這套課程特別照顧聽力：所有聲音都有文字，容易聽不見的字尾會畫底線，辨音不計分，語音辨識只當參考。</div>`,
@@ -65,11 +66,12 @@ function home() {
   const st = lessonState(), c = lessonContent(st.n), ws = wordStats();
   const doneToday = S.lessonDate === dateStr();
   const done = Math.min(S.lessonN || 0, TOTAL_LESSONS);
-  const daily = S.settings.daily || 60;
   const extras = [
     ['#/words', '單字複習', `待複習 ${ws.due} 張`],
     ['#/talk', '會話場景', '自由跟讀任何場景'],
     ['#/listen', '聽力', '辨音與聽寫'],
+    ['#/numbers', '數字聽力', '十五還是五十？價錢、時間、日期'],
+    ['#/sos', '聽不懂時的救急句', '12 句，還有給對方看的大字卡'],
     ['#/sounds', '發音嘴型', '用看的學發音'],
   ];
   app.innerHTML = `
@@ -89,15 +91,25 @@ function home() {
       <div class="stat"><b>${ws.chunks}</b><span>會說的句子</span></div>
     </div>
     <div class="card">
-      <div class="row between"><b>第一個里程碑：12 個場景都能對話</b><span class="muted">${done} / ${TOTAL_LESSONS} 課</span></div>
+      <div class="row between"><b>${done < 48 ? '第一冊：單元 1 到 12' : '第二冊：單元 13 到 24'}</b><span class="muted">${done} / ${TOTAL_LESSONS} 課</span></div>
       <div class="bar" style="margin-top:8px"><i style="width:${(done / TOTAL_LESSONS) * 100}%"></i></div>
-      <p class="muted" style="margin-bottom:0">每天一課，大約 ${Math.ceil((TOTAL_LESSONS - done) / 6)} 週後完成。<a href="#/plan">看完整路線</a></p>
+      <p class="muted" style="margin-bottom:0">共 24 個單元 ${TOTAL_LESSONS} 課。每天一課，大約 ${Math.ceil((TOTAL_LESSONS - done) / 6)} 週後全部完成。<a href="#/plan">看完整路線</a></p>
+    </div>
+    <div class="card"><b>這週在 App 以外</b>
+      <p class="muted" style="margin:4px 0 8px">App 只是一部分。學成的人都靠大量接觸和開口，每週把這三件事做完。</p>
+      ${WEEKLY.map(([k, t, d]) => `<label class="task"><input type="checkbox" data-week="${k}" ${weekDone()[k] ? 'checked' : ''}><div class="grow">${t}<br><span class="muted">${d}</span></div></label>`).join('')}
     </div>
     <h2>${doneToday ? '還有時間？延伸練習' : '自由練習'}</h2>
-    ${daily >= 90 ? '<p class="muted">你設定每天 1.5 小時以上。上完課後，建議再看 15 分鐘開英文字幕的短片（例如 BBC Learning English），並每週安排一次視訊對話。</p>' : ''}
     <div class="card list">${extras.map((e) => `<a class="item" href="${e[0]}"><span><b>${e[1]}</b><br><span class="muted">${e[2]}</span></span><span class="muted">›</span></a>`).join('')}</div>
     <div class="note">💡 ${esc(TIPS[dayNum() % TIPS.length])}</div>`;
+  $$('[data-week]').forEach((b) => { b.onchange = () => setWeekDone(b.dataset.week, b.checked); });
 }
+// 每週在 App 以外要做的三件事（依據：延伸閱讀、字幕影片、對話練習的統合研究，以及學成者的共同經驗）
+const WEEKLY = [
+  ['talk', '和真人或 AI 用英文「說」一次', '線上家教、語言交換或 AI 語音對話，視訊優先。先說明你的聽力狀況。'],
+  ['read', '邊聽邊讀簡單的英文 3 次', '例如 British Council LearnEnglish 的 A1 文章，或 BBC Learning English 附逐字稿的節目。'],
+  ['video', '看開英文字幕的短片 3 次', '先看字幕懂內容，再看一次注意說話的人的嘴型。'],
+];
 
 // ---------- 單字與句子複習 ----------
 function words() {
@@ -108,7 +120,7 @@ function words() {
   const finish = () => {
     if (had) markTask('words');
     const st = wordStats();
-    const more = allWords().filter((w) => !S.cards[w.id]);
+    const more = freshPool(false);
     app.innerHTML = `${head}
       <div class="card flash">
         <div class="big">${had ? '🎉 複習完成了' : '目前沒有要複習的卡片'}</div>
@@ -117,7 +129,7 @@ function words() {
       </div>`;
     const b = $('#more');
     if (b) b.onclick = () => {
-      const next = more.sort((a, c) => (a.level === 'MY' ? -1 : 0) - (c.level === 'MY' ? -1 : 0)).slice(0, 5);
+      const next = more.slice(0, 5);
       app.innerHTML = `${head}<div id="box"></div>`;
       cardRunner($('#box'), next, words);
     };
@@ -134,7 +146,7 @@ function plan() {
   app.innerHTML = `<h1>學習路線</h1>
     <div class="card"><div class="row between"><b>第 ${w} 週 / 52 週</b><span class="muted">開始日 ${S.start}</span></div>
       <div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, (w / 52) * 100)}%"></i></div></div>
-    <div class="note"><b>誠實的時間表：</b>依據劍橋的學習時數估計與 IELTS 進步幅度的研究，三個月達到慢速日常對話是做得到的（每天約 1.5 到 2 小時）。一年後的務實落點是 A2+ 到 B1，約 IELTS 4.5 到 5.5。IELTS 8.5 相當於 C2，沒有研究支持從基礎一年內達成，通常需要好幾年。這個 App 把它當方向，用每個階段的小目標帶你往前。</div>
+    <div class="note"><b>誠實的時間表：</b>劍橋英語公布的參考時數是從零到 A2 約 180 到 200 小時、到 B1 約 350 到 400 小時（有引導的學習，僅供參考，中文母語者通常要更久）。每天 1.5 到 2 小時，三個月約 135 到 180 小時，達到慢速日常對話是做得到的。一年後的務實落點是 A2+ 到 B1，約 IELTS 4.5 到 5.5。一份 IELTS 研究追蹤 52 位韓國成人，12 週、平均 284 小時的密集學習，總分平均進步 0.3 級分。IELTS 8.5 相當於 C2；我們找到的 8 到 8.5 分考生，備考前都已經有接近 C1 的程度。這個 App 把 8.5 當方向，用每個階段的小目標帶你往前。</div>
     ${PHASES.map((p, i) => `
       <div class="card phase ${p === cur ? 'current' : ''}">
         <div class="row between"><b>階段 ${i + 1}：${p.name}</b><span class="pill">第 ${p.weeks[0]}–${p.weeks[1]} 週</span></div>
@@ -147,9 +159,11 @@ function plan() {
     <div class="card">${UNITS.map((u, i) => `<div class="task"><div class="grow"><span class="muted">單元 ${i + 1}</span><br>${esc(u.cando)}</div>${mark(u)}</div>`).join('')}</div>
     <h2>App 以外一定要做的事</h2>
     <div class="card"><ul>
-      <li><b>找真人對話。</b>第 4 週起每週至少一次，可用語言交換 App 或線上家教。優先選視訊，看得到嘴型，並先說明你的聽力狀況。</li>
-      <li><b>看開英文字幕的短片。</b>研究顯示英文字幕對學單字的幫助很大，短的教學片或新聞比電影有效。</li>
-      <li><b>從第三階段開始讀分級讀本。</b>邊聽邊讀，生字加進自訂單字。</li>
+      <li><b>找人開口說。</b>第 2 週就開始，每週至少一次。學成的人最常後悔的是太晚開口，而且都說「約第一堂課」最難。線上家教請選一對一、安靜、看得到臉的視訊，並先說明聽力狀況；也請對方糾正你，不然閒聊型的家教通常不會主動糾正。</li>
+      <li><b>沒有人可以練時，用 AI 語音對話。</b>每個單元整合課的最後有可以複製的提示詞。統合研究顯示對話系統對初學者的口說有中等幫助，但那些研究大多早於現在的生成式 AI，也沒有和真人比較過。</li>
+      <li><b>看開英文字幕的短片。</b>統合研究顯示字幕對學單字有明顯幫助。聽損學習者的共同做法是：先讀文字，再邊看字邊聽，最後不看字再聽一次。</li>
+      <li><b>邊聽邊讀簡單的文章。</b>大量閱讀簡單內容的效果有統合研究支持（成人效果最明顯）。可以從 British Council LearnEnglish 的 A1 文章開始，生字加進自訂單字。</li>
+      <li><b>錄下自己的聲音。</b>跟讀時按「錄下自己」再聽一次，這是高分考生和學成者最常提到的習慣。</li>
       <li><b>問聽力師。</b>帶著聽力圖詢問助聽器能不能加強高頻，這會直接影響你聽得到哪些英文音。</li>
       <li><b>考 IELTS 前三個月聯絡考場</b>（British Council 或 IDP）申請聽障考生安排，例如耳機擴音、播放兩次的版本或讀唇版。</li>
     </ul></div>`;
